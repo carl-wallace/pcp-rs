@@ -44,6 +44,12 @@ Generated Artifacts:
           Full path and filename of the file containing JSON-formatted settings that govern storage of generated artifacts
 ```
 
+When `pcp-rs` is used to generate updated PKITS artifacts, manual steps are required to address some negative test cases,
+i.e., artifacts that support testing invalid signatures.
+
+The following sections describe generating PKITS clones using ML-DSA-44, ML-DSA-65, and ML-DSA-87. The `pkits.sh` file 
+uses provided settings files to generate clones in the `./target` folder.
+
 ### Cloning RSA artifacts using ML-DSA-44
 
 By default, `pcp-rs` will generate fake certificates based on certificates from `certs-folder` with `RSA_ENCRYPTION` keys 
@@ -52,8 +58,17 @@ the structure of the `PKITS_Data` folder. Following invocation of the command sh
 be created in the current working directory and contain `certs`, `crls`, `pkcs12` and `keys` folders. The `keys` folder
 contains intermediate values generated during the cloning process.
 
+To change the storage location, a settings file like the following can be used.
+
+```json
+{
+"folder": "./target/pkits_ml_dsa_44"
+}
+```
+
+
 ```bash
-pcp-rs -c -x /Users/username/Desktop/PKITS_data/certs -r /Users/username/Desktop/PKITS_data/crls/
+pcp-rs -c -x /Users/username/Desktop/PKITS_data/certs -r /Users/username/Desktop/PKITS_data/crls/ -s ss_44.json
 ```
 ### Cloning RSA artifacts using ML-DSA-65
 
@@ -62,7 +77,7 @@ The `--generation-settings` and `--storage-settings` can be used to tailor gener
 
 ```json
 {
-"folder": "/Users/username/Desktop/pkits_ml_dsa_65"
+"folder": "./target/pkits_ml_dsa_65"
 }
 ```
 [GenerationSettings] can define algorithm mappings (though only a single mapping has been tested to date).
@@ -90,7 +105,7 @@ Similar to the previous section, using the settings and command shown below can 
 
 ```json
 {
-"folder": "/Users/username/Desktop/pkits_ml_dsa_87"
+"folder": "./target/pkits_ml_dsa_87"
 }
 ```
 ```json
@@ -106,10 +121,6 @@ Similar to the previous section, using the settings and command shown below can 
 ```bash
 pcp-rs -c -x /Users/username/Desktop/PKITS_data/certs -r /Users/username/Desktop/PKITS_data/crls/ -s /Users/username/Desktop/ss_87.json -g /Users/username/Desktop/gen_87.json 
 ```
-
-
-When `pcp-rs` is used to generate updated PKITS artifacts, manual steps are required to address some negative test cases,
-i.e., artifacts that support testing invalid signatures.
 
 ## Potential TODO items
 - implement use of the `--file-extensions`, which is currently not used
