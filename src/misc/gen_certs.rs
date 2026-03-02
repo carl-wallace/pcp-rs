@@ -1,5 +1,6 @@
 //! Utilities to generate test certificates features ML_KEM_XXX_IPD keys signed with ML_DSA_44_IPD
 
+use core::{str::FromStr, time::Duration};
 use elliptic_curve::sec1::ToSec1Point;
 use log::error;
 use ml_kem::TryKeyInit;
@@ -10,8 +11,7 @@ use std::{
     fs::File,
     io::Write,
     path::Path,
-    str::FromStr,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use cipher::rand_core::CryptoRng;
@@ -120,6 +120,7 @@ pub fn generate_ta(sig: &SigAlgorithms) -> crate::error::Result<(PqcSigner, Cert
     Ok((signer, ca_cert))
 }
 
+/// Fills an array of size `L` with cryptographically random bytes.
 pub fn rand<L: ArraySize>(rng: &mut impl CryptoRng) -> Array<u8, L> {
     let mut val = Array::default();
     rng.fill_bytes(&mut val);
@@ -206,6 +207,7 @@ macro_rules! generate_composite_ecdh_key {
         (composite_sk, composite_pub_key, d, z)
     }};
 }
+/// Generates a certificate containing an ML-KEM public key, signed by the provided signer.
 pub fn generate_ml_kem_cert(
     signer: &PqcSigner,
     cert: &Certificate,

@@ -21,6 +21,7 @@ pub type Ciphertext = Vec<u8>;
 /// Plaintext for RSA KEM
 pub type Plaintext = Vec<u8>;
 impl RsaKem {
+    /// Constructs an [RsaKem] from a PKCS#1 DER-encoded private key.
     pub fn new(sk: &[u8]) -> crate::error::Result<Self> {
         Ok(Self {
             sk: RsaPrivateKey::from_pkcs1_der(sk).map_err(|_| Error::Rsa)?,

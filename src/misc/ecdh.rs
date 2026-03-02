@@ -11,6 +11,7 @@ use elliptic_curve::{
     sec1::{FromSec1Point, ModulusSize, ToSec1Point, ValidatePublicKey},
 };
 
+#[allow(missing_docs)]
 pub struct EcdhKem<C>
 where
     C: AssociatedOid + Curve + ValidatePublicKey,
@@ -35,6 +36,7 @@ where
     C: AssociatedOid + Curve + CurveArithmetic + ValidatePublicKey,
     FieldBytesSize<C>: ModulusSize,
 {
+    /// Constructs an [EcdhKem] from a DER-encoded secret key.
     pub fn new(der_sk: &[u8]) -> crate::error::Result<Self> {
         let sk = match SecretKey::<C>::from_slice(der_sk) {
             Ok(sk) => sk,
@@ -45,20 +47,24 @@ where
         };
         Ok(Self { sk })
     }
+    /// Generates a new ephemeral [EcdhKem] key pair.
     pub fn keygen() -> crate::error::Result<Self> {
         let mut rng = rng();
         let sk = SecretKey::<C>::generate_from_rng(&mut rng);
         Ok(Self { sk })
     }
 
+    /// Returns the public key corresponding to this secret key.
     pub fn to_public_key(&self) -> PublicKey<C> {
         self.sk.public_key()
     }
 
+    /// Serializes the secret key to bytes.
     pub fn to_bytes(&self) -> crate::error::Result<Vec<u8>> {
         Ok(self.sk.to_bytes().to_vec())
     }
 
+    /// Encapsulates to a recipient's public key; returns `(shared_secret, ciphertext)`.
     pub fn encap(recip_pub_key_bytes: &[u8]) -> crate::error::Result<(Vec<u8>, Vec<u8>)>
     where
         <C as CurveArithmetic>::AffinePoint: FromSec1Point<C>,
@@ -76,6 +82,7 @@ where
             .to_vec();
         Ok((ss.raw_secret_bytes().to_vec(), ct))
     }
+    /// Decapsulates a ciphertext and returns the shared secret.
     pub fn decap(&self, ciphertext: &[u8]) -> crate::error::Result<Vec<u8>>
     where
         <C as CurveArithmetic>::AffinePoint: FromSec1Point<C>,

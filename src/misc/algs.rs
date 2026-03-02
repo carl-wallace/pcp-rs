@@ -1,7 +1,7 @@
 //! Enums that define the algorithms supported by kemri_toy.
 #![allow(unused)]
 
-use std::fmt;
+use core::fmt;
 
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +47,7 @@ use crate::{
 
 /// KEM algorithms available via command line argument
 #[derive(Clone, Serialize, Deserialize, Debug, Default, clap::ValueEnum)]
+#[allow(missing_docs)]
 pub enum KemAlgorithms {
     #[default]
     MlKem512,
@@ -234,6 +235,7 @@ impl KemAlgorithms {
 
 /// KEM algorithms available via command line argument
 #[derive(Clone, Serialize, Deserialize, Debug, Default, clap::ValueEnum)]
+#[allow(missing_docs)]
 pub enum SigAlgorithms {
     #[default]
     MlDsa44,
@@ -337,6 +339,7 @@ impl fmt::Display for SigAlgorithms {
 }
 
 impl SigAlgorithms {
+    /// Generates a fresh key pair for this algorithm and returns a [PqcSigner].
     pub fn generate_key_pair(&self) -> error::Result<PqcSigner> {
         let mut rng = &mut rand::rng();
 
@@ -824,6 +827,7 @@ impl SigAlgorithms {
 
 /// AEAD algorithms available via command line argument
 #[derive(Clone, Serialize, Deserialize, Debug, Default, clap::ValueEnum)]
+#[allow(missing_docs)]
 pub enum AeadAlgorithms {
     #[default]
     Aes128Gcm,
@@ -858,6 +862,7 @@ impl AeadAlgorithms {
 
 /// Encryption algorithms available via command line argument
 #[derive(Clone, Serialize, Deserialize, Debug, Default, clap::ValueEnum)]
+#[allow(missing_docs)]
 pub enum EncAlgorithms {
     #[default]
     Aes128,
@@ -896,6 +901,7 @@ impl EncAlgorithms {
 
 /// KDF algorithms available via command line argument
 #[derive(Clone, Serialize, Deserialize, Debug, Default, clap::ValueEnum)]
+#[allow(missing_docs)]
 pub enum KdfAlgorithms {
     #[default]
     HkdfSha256,

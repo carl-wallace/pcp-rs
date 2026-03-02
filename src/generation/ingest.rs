@@ -17,6 +17,7 @@ use crate::{
     storage::settings::StorageSettings,
 };
 
+/// Generates and saves a fresh key pair for `cert` using the target algorithm from `generation_settings`.
 pub fn generate_key_pair(
     cert: &Certificate,
     generation_settings: &GenerationSettings,

@@ -1,10 +1,10 @@
 //! Generation-related settings
 
+use core::str::FromStr;
 use log::error;
 use serde::{Deserialize, Serialize};
 use serde_json::Result as SerdeResult;
 use std::path::Path;
-use std::str::FromStr;
 
 use const_oid::{ObjectIdentifier, db::fips204::ID_ML_DSA_44};
 use x509_cert::Certificate;
@@ -12,11 +12,14 @@ use x509_cert::Certificate;
 use crate::misc::utils::get_file_as_byte_vec;
 use crate::{Result, misc::utils::cert_type};
 
+/// Settings controlling which source algorithms are mapped to which target algorithms.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct GenerationSettings {
+    /// List of algorithm mappings from source to target OID.
     pub alg_mappings: Vec<AlgMapping>,
 }
 
+/// Reads a JSON-formatted [GenerationSettings] instance from a file.
 pub fn read_generation_settings(file_name: &str) -> GenerationSettings {
     if Path::exists(Path::new(file_name))
         && let Ok(json) = get_file_as_byte_vec(Path::new(file_name))
@@ -38,11 +41,13 @@ impl Default for GenerationSettings {
 }
 
 impl GenerationSettings {
+    /// Tries to load [GenerationSettings] from a file (currently unimplemented; returns default).
     pub fn try_from(_file: &str) -> Result<Self> {
         // todo
         Ok(GenerationSettings::default())
     }
 
+    /// Returns the target [ObjectIdentifier] for the source algorithm found in `cert`.
     pub fn get_target(&self, cert: &Certificate, orig_path: &str) -> Result<ObjectIdentifier> {
         let source = cert
             .tbs_certificate()
@@ -69,17 +74,25 @@ impl GenerationSettings {
     }
 }
 
+/// Describes the key-usage profile of a certificate.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum KeyUsageProfile {
+    /// Certificate is used only for digital signatures.
     SignatureOnly,
+    /// Certificate is used only for key encipherment or key agreement.
     EncryptionOnly,
+    /// Certificate is used for both signatures and encryption.
     SignatureAndEncryption,
 }
 
+/// Maps a source algorithm OID (and optional key-usage profile) to a target algorithm OID.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct AlgMapping {
+    /// OID string of the source algorithm.
     pub source_alg: String,
+    /// Optional key-usage profile to narrow the match.
     pub source_key_usage: Option<KeyUsageProfile>,
+    /// OID string of the target algorithm.
     pub target_alg: String,
 }
 

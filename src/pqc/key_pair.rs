@@ -9,6 +9,7 @@ use slh_dsa::{
 };
 
 #[allow(dead_code)]
+#[allow(missing_docs)]
 pub enum PqcKeyPair {
     MlDsa44(Box<KeyPair<MlDsa44>>),
     MlDsa65(Box<KeyPair<MlDsa65>>),

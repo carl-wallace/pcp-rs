@@ -48,7 +48,8 @@ When `pcp-rs` is used to generate updated PKITS artifacts, manual steps are requ
 i.e., artifacts that support testing invalid signatures.
 
 The following sections describe generating PKITS clones using ML-DSA-44, ML-DSA-65, and ML-DSA-87. The `pkits.sh` file 
-uses provided settings files to generate clones in the `./target` folder.
+uses provided settings files to generate clones in the `./target` folder. Generating PKITS clones using SLH-DSA follows
+the same process. Config files for both ML-DSA and SLH-DSA can be found in the config folder.
 
 ### Cloning RSA artifacts using ML-DSA-44
 
@@ -68,7 +69,7 @@ To change the storage location, a settings file like the following can be used.
 
 
 ```bash
-pcp-rs -c -x /Users/username/Desktop/PKITS_data/certs -r /Users/username/Desktop/PKITS_data/crls/ -s ss_44.json
+pcp-rs -c -x ./PKITS_data/certs -r ./PKITS_data/crls/ -s ./config/ss_44.json
 ```
 ### Cloning RSA artifacts using ML-DSA-65
 
@@ -97,7 +98,7 @@ Assuming the settings shown above are available in the indicated files, i.e., `s
 an updated PKITS data set using `ML-DSA-65`
 
 ```bash
-pcp-rs -c -x /Users/username/Desktop/PKITS_data/certs -r /Users/username/Desktop/PKITS_data/crls/ -s /Users/username/Desktop/ss_65.json -g /Users/username/Desktop/gen_65.json 
+pcp-rs -c -x ./PKITS_data/certs -r ./PKITS_data/crls/ -s ./config/ss_65.json -g ./config/gen_65.json 
 ```
 ### Cloning RSA artifacts using ML-DSA-65
 
@@ -119,15 +120,15 @@ Similar to the previous section, using the settings and command shown below can 
 }
 ```
 ```bash
-pcp-rs -c -x /Users/username/Desktop/PKITS_data/certs -r /Users/username/Desktop/PKITS_data/crls/ -s /Users/username/Desktop/ss_87.json -g /Users/username/Desktop/gen_87.json 
+pcp-rs -c -x ./PKITS_data/certs -r ./PKITS_data/crls/ -s ./config/ss_87.json -g ./config/gen_87.json 
 ```
 
 ## Potential TODO items
 - implement use of the `--file-extensions`, which is currently not used
-- save various forms of private key to the `keys` folder, i.e., seed-only, expanded-only, both 
-- add support for generating SLH-DSA artifacts and composite ML-DSA artifacts
+- add support for generating composite ML-DSA artifacts
 - add support for generating end entity certificates with ML-KEM keys
 - add support for cloning artifacts without changing the algorithm
 - add support for generating artifacts for the `smime` folder
 - add support for cloning artifacts by generating certificate requests with same contents but new keys
 - implement richer algorithm mapping, i.e., key sizes, key usage, maybe based on namespaces, etc.
+- add generation mode based on signature verification success instead of SKID/AKID chaining

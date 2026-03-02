@@ -38,6 +38,7 @@ use pqckeys::pqc_oids::{
 
 #[allow(dead_code)]
 #[derive(Clone)]
+#[allow(missing_docs)]
 pub enum PqcVerifyingKey {
     MlDsa44(Box<VerifyingKey<MlDsa44>>),
     MlDsa65(Box<VerifyingKey<MlDsa65>>),

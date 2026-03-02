@@ -103,6 +103,8 @@ pub struct FakeCrl {
     pub signature: BitString,
 }
 
+/// Gets the key identifier values from an AKID extension, and failing that tries to get a value
+/// from a SKID extension.
 pub fn get_akid(cert: &Certificate) -> crate::Result<String> {
     if let Some(exts) = &cert.tbs_certificate().extensions() {
         for ext in exts.as_slice() {
@@ -113,10 +115,10 @@ pub fn get_akid(cert: &Certificate) -> crate::Result<String> {
             }
         }
     }
-    // todo - assuming self-signed for the moment
     get_skid(cert)
 }
 
+/// Gets the key identifier values from an SKID extension.
 pub fn get_skid(cert: &Certificate) -> crate::Result<String> {
     if let Some(exts) = &cert.tbs_certificate().extensions() {
         for ext in exts.as_slice() {
@@ -132,6 +134,7 @@ pub fn get_skid(cert: &Certificate) -> crate::Result<String> {
     Err(Error::Unrecognized)
 }
 
+/// Gets the key identifier values from an AKID extension.
 pub fn get_akid_from_crl(crl: &CertificateList, orig_path: &str) -> crate::Result<String> {
     if let Some(exts) = &crl.tbs_cert_list.crl_extensions {
         for ext in exts.as_slice() {

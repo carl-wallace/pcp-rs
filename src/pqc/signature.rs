@@ -11,7 +11,9 @@ use slh_dsa::{
 use der::asn1::BitString;
 use spki::SignatureBitStringEncoding;
 
+/// A PQC signature value for any supported algorithm variant.
 #[allow(dead_code)]
+#[allow(missing_docs)]
 pub enum PqcSignature {
     MlDsa44(Box<Signature<MlDsa44>>),
     MlDsa65(Box<Signature<MlDsa65>>),

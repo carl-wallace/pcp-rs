@@ -46,6 +46,7 @@ lazy_static! {
         hex_literal::hex!("436F6D706F73697465416C676F726974686D5369676E61747572657332303235");
 }
 
+/// Returns the hash algorithm OID used for the given composite signature OID.
 pub fn get_hash_alg(composite_oid: ObjectIdentifier) -> crate::error::Result<ObjectIdentifier> {
     if composite_oid == ID_MLDSA44_RSA2048_PKCS15_SHA256
         || composite_oid == ID_MLDSA44_RSA2048_PSS_SHA256
@@ -71,8 +72,11 @@ fn hash_message(composite_oid: ObjectIdentifier, message: &[u8]) -> crate::error
         Ok(Sha512::digest(message).as_slice().to_vec())
     }
 }
+/// Holds a PQC key pair and its associated seed, used for signing operations.
 pub struct PqcSigner {
+    /// Seed bytes used to reconstruct the key pair (empty for SLH-DSA).
     pub seed: Vec<u8>,
+    /// The underlying PQC key pair.
     pub keypair: PqcKeyPair,
 }
 
@@ -119,7 +123,10 @@ impl PqcSigner {
         }
     }
     pub(crate) fn public_key_der(&self) -> Vec<u8> {
-        self.verifying_key().to_public_key_der().unwrap().to_vec()
+        self.verifying_key()
+            .to_public_key_der()
+            .expect("verifying key DER encoding should never fail")
+            .to_vec()
     }
     #[allow(clippy::unwrap_used)] // todo - fix me
     pub(crate) fn public_key(&self) -> Vec<u8> {

@@ -87,11 +87,13 @@ use crate::{
     misc::{ecdh::EcdhKem, rsa::RsaKem},
 };
 
+/// Reads a file and tried to parse the contents as a certificate
 pub fn get_file_as_cert(filename: &Path) -> Result<Certificate> {
     let der_cert = get_file_as_byte_vec_pem(filename)?;
     Ok(Certificate::from_der(&der_cert)?)
 }
 
+/// Reads a file and returns the contents as a Vec<u8>
 pub fn get_file_as_byte_vec(filename: &Path) -> Result<Vec<u8>> {
     match File::open(filename) {
         Ok(mut f) => match std::fs::metadata(filename) {
@@ -142,6 +144,7 @@ pub fn get_file_as_byte_vec_pem(filename: &Path) -> Result<Vec<u8>> {
     Ok(b)
 }
 
+/// Determines the [KeyUsageProfile] of a certificate based on its key usage extension.
 pub fn cert_type(cert: &Certificate) -> Result<KeyUsageProfile> {
     if let Some(exts) = &cert.tbs_certificate().extensions() {
         for ext in exts.as_slice() {
@@ -176,7 +179,7 @@ pub fn cert_type(cert: &Certificate) -> Result<KeyUsageProfile> {
 
 /// Buffer to hex conversion for logging
 pub fn buffer_to_hex(buffer: &[u8]) -> String {
-    std::str::from_utf8(&subtle_encoding::hex::encode_upper(buffer))
+    core::str::from_utf8(&subtle_encoding::hex::encode_upper(buffer))
         .unwrap_or_default()
         .to_string()
 }
@@ -330,6 +333,7 @@ pub fn generate_enveloped_data(
     Ok(content_info.to_der()?)
 }
 
+/// AEAD content encryption algorithms supported for AuthEnvelopedData.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ContentEncryptionAlgorithmAead {
     /// AES-128 GCM
@@ -388,6 +392,7 @@ pub fn generate_auth_enveloped_data(
     Ok(content_info.to_der()?)
 }
 
+/// Decrypts the content-encryption key from a [KeyTransRecipientInfo] using the provided RSA private key.
 pub fn process_ktri(ktri: &KeyTransRecipientInfo, ee_sk: &[u8]) -> Result<Vec<u8>> {
     use rsa::pkcs1::DecodeRsaPrivateKey;
     use rsa::{Pkcs1v15Encrypt, RsaPrivateKey};
@@ -991,6 +996,7 @@ pub fn get_cert_from_file_arg(file_name: &Option<PathBuf>) -> Result<Certificate
     Ok(Certificate::from_der(&der)?)
 }
 
+/// Returns a human-readable filename fragment for the given algorithm OID.
 pub fn get_filename_from_oid(oid: ObjectIdentifier) -> String {
     match oid {
         ID_ALG_ML_KEM_512 => "mlkem512".to_string(),

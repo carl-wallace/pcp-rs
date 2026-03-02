@@ -1,6 +1,6 @@
 //! Error and Result types for `pcp-rs`
+use core::array::TryFromSliceError;
 use log::error;
-use std::array::TryFromSliceError;
 
 /// Result type for `pcp-rs`
 pub type Result<T> = core::result::Result<T, Error>;

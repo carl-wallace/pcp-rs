@@ -13,10 +13,10 @@ use x509_cert::{
 
 /// KEM Certificate
 pub struct KemCert {
-    /// issuer   Name,
     /// represents the name signing the certificate
     pub issuer: Name,
 
+    /// represents the name of the subject of the certificate
     pub subject: Name,
 }
 
