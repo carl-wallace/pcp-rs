@@ -22,7 +22,6 @@ pub mod error;
 pub mod generation;
 pub mod logging;
 pub mod misc;
-pub mod pkcs12_builder;
 pub mod pqc;
 pub mod storage;
 

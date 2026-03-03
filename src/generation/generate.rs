@@ -16,11 +16,12 @@ use crate::asn1::private_key::{
     MlDsaSeed,
 };
 use crate::misc::utils::get_file_as_byte_vec;
-use crate::pkcs12_builder::asn1_utils::get_key_and_cert;
 use crate::{
     Error, generation::settings::GenerationSettings, misc::utils::get_file_as_cert,
-    pkcs12_builder::pkcs12_builder::Pkcs12Builder, storage::settings::StorageSettings,
+    storage::settings::StorageSettings,
 };
+use pkcs12_builder::Pkcs12Builder;
+use pkcs12_builder::asn1_utils::get_key_and_cert;
 
 /// Walks the input folder, generates a fresh key pair for each certificate per the generation
 /// settings the saves the private key and public key per the storage settings.
@@ -246,7 +247,7 @@ pub fn generate_and_save_pkcs12(
     match p12_builder.build_with_rng(cert, oak, &password, &mut rand::rng()) {
         Ok(pkcs12) => {
             match get_key_and_cert(&pkcs12, &password) {
-                Ok((recovered_key, recovered_cert)) => {
+                Ok((recovered_key, recovered_cert, _)) => {
                     assert_eq!(&recovered_cert, cert);
                     assert_eq!(&recovered_key, oak);
                 }
