@@ -15,6 +15,7 @@ pkcs12 = { version = "0.2.0-pre.0", features = ["kdf"] }
 spki = "0.8.0-rc.4"
 x509-cert = { version = "0.3.0-rc.4", features = ["hazmat", "builder"] }
 
+pkcs12_builder = { git="https://github.com/carl-wallace/pkcs12_builder.git"}
 pqckeys = { git = "https://github.com/carl-wallace/pqckeys", branch = "updates" }
 
 # cryptography-related crates

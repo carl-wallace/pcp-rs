@@ -1148,6 +1148,7 @@ dependencies = [
  "p521",
  "pem-rfc7468",
  "pkcs12",
+ "pkcs12_builder",
  "pkcs5",
  "pkcs8",
  "pqckeys",
@@ -1206,6 +1207,28 @@ dependencies = [
  "spki",
  "x509-cert",
  "zeroize",
+]
+
+[[package]]
+name = "pkcs12_builder"
+version = "0.1.0"
+source = "git+https://github.com/carl-wallace/pkcs12_builder.git#36014567e107baca88db6a9f515caef3ce073611"
+dependencies = [
+ "cms",
+ "const-oid",
+ "crypto-common",
+ "der",
+ "hmac",
+ "log",
+ "pkcs12",
+ "pkcs5",
+ "pkcs8",
+ "rand 0.10.0",
+ "rand_core 0.10.0",
+ "sha2",
+ "spki",
+ "subtle",
+ "x509-cert",
 ]
 
 [[package]]
