@@ -291,15 +291,15 @@ impl PqcSigner {
         match &self.keypair {
             PqcKeyPair::MlDsa44(kp) => {
                 let sk = kp.signing_key();
-                sk.to_expanded().as_bytes().to_vec()
+                sk.expanded_key().to_expanded().as_bytes().to_vec()
             }
             PqcKeyPair::MlDsa65(kp) => {
                 let sk = kp.signing_key();
-                sk.to_expanded().as_bytes().to_vec()
+                sk.expanded_key().to_expanded().as_bytes().to_vec()
             }
             PqcKeyPair::MlDsa87(kp) => {
                 let sk = kp.signing_key();
-                sk.to_expanded().as_bytes().to_vec()
+                sk.expanded_key().to_expanded().as_bytes().to_vec()
             }
             PqcKeyPair::Sha2_128f(sk) => sk.to_vec(),
             PqcKeyPair::Sha2_128s(sk) => sk.to_vec(),
@@ -314,7 +314,12 @@ impl PqcSigner {
             PqcKeyPair::Shake256f(sk) => sk.to_vec(),
             PqcKeyPair::Shake256s(sk) => sk.to_vec(),
             PqcKeyPair::Mldsa44Rsa2048PssSha256(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let rsa = sk.1.to_pkcs1_der().unwrap();
                 let mut retval = vec![];
                 retval.append(&mut mldsa);
@@ -322,7 +327,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa44Rsa2048Pkcs15Sha256(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let rsa = sk.1.to_pkcs1_der().unwrap();
                 let mut retval = vec![];
                 retval.append(&mut mldsa);
@@ -330,7 +340,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa44Ed25519Sha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let ecdsa = sk.1.to_bytes().to_vec();
 
                 let mut retval = vec![];
@@ -339,7 +354,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa44EcdsaP256Sha256(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let ecdsa = sk.1.to_bytes().to_vec();
 
                 let mut retval = vec![];
@@ -348,7 +368,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa65Rsa3072PssSha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let rsa = sk.1.to_pkcs1_der().unwrap();
                 let mut retval = vec![];
                 retval.append(&mut mldsa);
@@ -356,7 +381,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa65Rsa4096PssSha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let rsa = sk.1.to_pkcs1_der().unwrap();
                 let mut retval = vec![];
                 retval.append(&mut mldsa);
@@ -364,7 +394,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa65Rsa4096Pkcs15Sha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let rsa = sk.1.to_pkcs1_der().unwrap();
                 let mut retval = vec![];
                 retval.append(&mut mldsa);
@@ -372,7 +407,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa65EcdsaP256Sha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let ecdsa = sk.1.to_bytes().to_vec();
 
                 let mut retval = vec![];
@@ -381,7 +421,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa65EcdsaP384Sha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let ecdsa = sk.1.to_bytes().to_vec();
 
                 let mut retval = vec![];
@@ -390,7 +435,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa65Ed25519Sha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let ecdsa = sk.1.to_bytes().to_vec();
 
                 let mut retval = vec![];
@@ -399,7 +449,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa87EcdsaP384Sha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let ecdsa = sk.1.to_bytes().to_vec();
 
                 let mut retval = vec![];
@@ -411,7 +466,12 @@ impl PqcSigner {
                 todo!("support serializing Mldsa87Ed448Shake256 private key")
             }
             PqcKeyPair::Mldsa87Rsa3072PssSha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let rsa = sk.1.to_pkcs1_der().unwrap();
                 let mut retval = vec![];
                 retval.append(&mut mldsa);
@@ -419,7 +479,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa87Rsa4096PssSha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let rsa = sk.1.to_pkcs1_der().unwrap();
                 let mut retval = vec![];
                 retval.append(&mut mldsa);
@@ -427,7 +492,12 @@ impl PqcSigner {
                 retval
             }
             PqcKeyPair::Mldsa87EcdsaP521Sha512(sk) => {
-                let mut mldsa = sk.0.signing_key().to_expanded().as_bytes().to_vec();
+                let mut mldsa =
+                    sk.0.signing_key()
+                        .expanded_key()
+                        .to_expanded()
+                        .as_bytes()
+                        .to_vec();
                 let ecdsa = sk.1.to_bytes().to_vec();
 
                 let mut retval = vec![];
