@@ -21,7 +21,7 @@ use elliptic_curve::{
     sec1::{FromSec1Point, ModulusSize, ToSec1Point, ValidatePublicKey},
 };
 use hkdf::Hkdf;
-use ml_dsa::{KeyGen, MlDsa44, MlDsa65, MlDsa87};
+use ml_dsa::{MlDsa44, MlDsa65, MlDsa87};
 #[allow(deprecated)]
 use ml_kem::ExpandedKeyEncoding;
 use ml_kem::{
@@ -66,6 +66,7 @@ use x509_cert::{
 
 use pqckeys::{oak::OneAsymmetricKey, pqc_oids::*};
 
+use crate::pqc::key_pair::KeyPair;
 use crate::{
     asn1::{
         EcPrivateKey,
@@ -516,8 +517,9 @@ pub(crate) fn extract_private_key(
             match key {
                 MlDsa44PrivateKey::Seed(seed) => {
                     let b32 = B32::try_from(seed.as_bytes())?;
-                    Ok(MlDsa44::from_seed(&b32)
+                    Ok(KeyPair::<MlDsa44>::from_seed(&b32)
                         .signing_key()
+                        .expanded_key()
                         .to_expanded()
                         .as_bytes()
                         .to_vec())
@@ -525,8 +527,9 @@ pub(crate) fn extract_private_key(
                 MlDsa44PrivateKey::ExpandedKey(exp_key) => Ok(exp_key.as_bytes().to_vec()),
                 MlDsa44PrivateKey::Both(both) => {
                     let b32 = B32::try_from(both.seed.as_bytes())?;
-                    let ek = MlDsa44::from_seed(&b32)
+                    let ek = KeyPair::<MlDsa44>::from_seed(&b32)
                         .signing_key()
+                        .expanded_key()
                         .to_expanded()
                         .as_bytes()
                         .to_vec();
@@ -544,8 +547,9 @@ pub(crate) fn extract_private_key(
             match key {
                 MlDsa65PrivateKey::Seed(seed) => {
                     let b32 = B32::try_from(seed.as_bytes())?;
-                    Ok(MlDsa65::from_seed(&b32)
+                    Ok(KeyPair::<MlDsa65>::from_seed(&b32)
                         .signing_key()
+                        .expanded_key()
                         .to_expanded()
                         .as_bytes()
                         .to_vec())
@@ -553,8 +557,9 @@ pub(crate) fn extract_private_key(
                 MlDsa65PrivateKey::ExpandedKey(exp_key) => Ok(exp_key.as_bytes().to_vec()),
                 MlDsa65PrivateKey::Both(both) => {
                     let b32 = B32::try_from(both.seed.as_bytes())?;
-                    let ek = MlDsa65::from_seed(&b32)
+                    let ek = KeyPair::<MlDsa65>::from_seed(&b32)
                         .signing_key()
+                        .expanded_key()
                         .to_expanded()
                         .as_bytes()
                         .to_vec();
@@ -572,8 +577,9 @@ pub(crate) fn extract_private_key(
             match key {
                 MlDsa87PrivateKey::Seed(seed) => {
                     let b32 = B32::try_from(seed.as_bytes())?;
-                    Ok(MlDsa87::from_seed(&b32)
+                    Ok(KeyPair::<MlDsa87>::from_seed(&b32)
                         .signing_key()
+                        .expanded_key()
                         .to_expanded()
                         .as_bytes()
                         .to_vec())
@@ -581,8 +587,9 @@ pub(crate) fn extract_private_key(
                 MlDsa87PrivateKey::ExpandedKey(exp_key) => Ok(exp_key.as_bytes().to_vec()),
                 MlDsa87PrivateKey::Both(both) => {
                     let b32 = B32::try_from(both.seed.as_bytes())?;
-                    let ek = MlDsa87::from_seed(&b32)
+                    let ek = KeyPair::<MlDsa87>::from_seed(&b32)
                         .signing_key()
+                        .expanded_key()
                         .to_expanded()
                         .as_bytes()
                         .to_vec();

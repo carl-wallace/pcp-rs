@@ -1,12 +1,35 @@
 //! Enum that defines the types of key pairs that are supported
 
 use ed448_goldilocks::Ed448;
-use ml_dsa::{KeyPair, MlDsa44, MlDsa65, MlDsa87};
+use ml_dsa::{B32, Keypair as _, MlDsa44, MlDsa65, MlDsa87, MlDsaParams, VerifyingKey};
 use rsa::RsaPrivateKey;
 use slh_dsa::{
     Sha2_128f, Sha2_128s, Sha2_192f, Sha2_192s, Sha2_256f, Sha2_256s, Shake128f, Shake128s,
     Shake192f, Shake192s, Shake256f, Shake256s, SigningKey,
 };
+
+/// An ML-DSA key pair, generated from a seed.
+///
+/// ml-dsa 0.1.1 removed its own `KeyPair`; the seed-backed `SigningKey` now carries both halves.
+/// This keeps the methods pcp-rs calls on a key pair.
+pub struct KeyPair<P: MlDsaParams>(ml_dsa::SigningKey<P>);
+
+impl<P: MlDsaParams> KeyPair<P> {
+    /// Derives the key pair from `xi` (FIPS 204 ML-DSA.KeyGen_internal).
+    pub fn from_seed(xi: &B32) -> Self {
+        Self(ml_dsa::SigningKey::from_seed(xi))
+    }
+
+    /// The signing key.
+    pub fn signing_key(&self) -> &ml_dsa::SigningKey<P> {
+        &self.0
+    }
+
+    /// The verifying key.
+    pub fn verifying_key(&self) -> VerifyingKey<P> {
+        self.0.verifying_key()
+    }
+}
 
 #[allow(dead_code)]
 #[allow(missing_docs)]

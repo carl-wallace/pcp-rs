@@ -8,7 +8,7 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use serde_json::Result as SerdeResult;
 
-use ml_dsa::{B32, KeyGen, MlDsa44, MlDsa65, MlDsa87};
+use ml_dsa::{B32, MlDsa44, MlDsa65, MlDsa87};
 use slh_dsa::{
     Sha2_128f, Sha2_128s, Sha2_192f, Sha2_192s, Sha2_256f, Sha2_256s, Shake128f, Shake128s,
     Shake192f, Shake192s, Shake256f, Shake256s, SigningKey,
@@ -32,7 +32,10 @@ use pqckeys::oak::{OneAsymmetricKey, PrivateKey};
 use crate::{
     Error, Result,
     misc::utils::get_file_as_byte_vec,
-    pqc::{key_pair::PqcKeyPair, signer::PqcSigner},
+    pqc::{
+        key_pair::{KeyPair, PqcKeyPair},
+        signer::PqcSigner,
+    },
     storage::{
         asn1,
         asn1::{DeferDecodeSigned, FakeCertificate, FakeCrl, FakeTbsCertificate},
@@ -267,7 +270,7 @@ impl StorageSettings {
                     B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
                 PqcSigner::new(
                     &ca_seed_bytes,
-                    PqcKeyPair::MlDsa44(Box::new(MlDsa44::from_seed(&ca_seed))),
+                    PqcKeyPair::MlDsa44(Box::new(KeyPair::<MlDsa44>::from_seed(&ca_seed))),
                 )
             }
             ID_ML_DSA_65 => {
@@ -278,7 +281,7 @@ impl StorageSettings {
                     B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
                 PqcSigner::new(
                     &ca_seed_bytes,
-                    PqcKeyPair::MlDsa65(Box::new(MlDsa65::from_seed(&ca_seed))),
+                    PqcKeyPair::MlDsa65(Box::new(KeyPair::<MlDsa65>::from_seed(&ca_seed))),
                 )
             }
             ID_ML_DSA_87 => {
@@ -289,7 +292,7 @@ impl StorageSettings {
                     B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
                 PqcSigner::new(
                     &ca_seed_bytes,
-                    PqcKeyPair::MlDsa87(Box::new(MlDsa87::from_seed(&ca_seed))),
+                    PqcKeyPair::MlDsa87(Box::new(KeyPair::<MlDsa87>::from_seed(&ca_seed))),
                 )
             }
             ID_SLH_DSA_SHA_2_128_F => {
@@ -453,7 +456,7 @@ impl StorageSettings {
                     B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
                 PqcSigner::new(
                     &ca_seed_bytes,
-                    PqcKeyPair::MlDsa44(Box::new(MlDsa44::from_seed(&ca_seed))),
+                    PqcKeyPair::MlDsa44(Box::new(KeyPair::<MlDsa44>::from_seed(&ca_seed))),
                 )
             }
             ID_ML_DSA_65 => {
@@ -464,7 +467,7 @@ impl StorageSettings {
                     B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
                 PqcSigner::new(
                     &ca_seed_bytes,
-                    PqcKeyPair::MlDsa65(Box::new(MlDsa65::from_seed(&ca_seed))),
+                    PqcKeyPair::MlDsa65(Box::new(KeyPair::<MlDsa65>::from_seed(&ca_seed))),
                 )
             }
             ID_ML_DSA_87 => {
@@ -475,7 +478,7 @@ impl StorageSettings {
                     B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
                 PqcSigner::new(
                     &ca_seed_bytes,
-                    PqcKeyPair::MlDsa87(Box::new(MlDsa87::from_seed(&ca_seed))),
+                    PqcKeyPair::MlDsa87(Box::new(KeyPair::<MlDsa87>::from_seed(&ca_seed))),
                 )
             }
             ID_SLH_DSA_SHA_2_128_F => {

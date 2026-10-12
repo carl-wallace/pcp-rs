@@ -99,7 +99,6 @@ impl From<pkcs12_builder::Error> for Error {
         match err {
             pkcs12_builder::Error::Asn1(e) => Error::Asn1(e),
             pkcs12_builder::Error::InvalidLength(e) => Error::InvalidLength(e),
-            pkcs12_builder::Error::General(s) => Error::General(s),
             pkcs12_builder::Error::NotFound => Error::NotFound,
             pkcs12_builder::Error::Pkcs5(e) => Error::Pkcs5(e),
             pkcs12_builder::Error::Pkcs12Builder(s) => Error::Pkcs12Builder(s),

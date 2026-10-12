@@ -21,7 +21,7 @@ use crate::{
     storage::settings::StorageSettings,
 };
 use pkcs12_builder::Pkcs12Builder;
-use pkcs12_builder::asn1_utils::get_key_and_cert;
+use pkcs12_builder::asn1_utils::parse_pkcs12;
 
 /// Walks the input folder, generates a fresh key pair for each certificate per the generation
 /// settings the saves the private key and public key per the storage settings.
@@ -246,10 +246,11 @@ pub fn generate_and_save_pkcs12(
     let password = Zeroizing::new(String::from("password"));
     match p12_builder.build_with_rng(cert, oak, &password, &mut rand::rng()) {
         Ok(pkcs12) => {
-            match get_key_and_cert(&pkcs12, &password) {
-                Ok((recovered_key, recovered_cert, _)) => {
-                    assert_eq!(&recovered_cert, cert);
-                    assert_eq!(&recovered_key, oak);
+            match parse_pkcs12(&pkcs12, &password) {
+                Ok(contents) => {
+                    let recovered_cert = Certificate::from_der(&contents.certificate.der).ok();
+                    assert_eq!(recovered_cert.as_ref(), Some(cert));
+                    assert_eq!(contents.key_der.as_slice(), oak);
                 }
                 Err(e) => {
                     error!("Failed to parse generated PKCS #12: {e:?}. Ignoring and continuing.");
