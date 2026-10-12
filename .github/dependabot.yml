@@ -1,0 +1,41 @@
+# Dependency updates, monthly, one grouped pull request.
+#
+# Updates move Cargo.lock only (lockfile-only). pcp-rs ships a binary, whose lockfile is what pins
+# what it builds against; raising the requirements in Cargo.toml, most of them still release
+# candidates, is a decision for a dependency round rather than routine churn.
+#
+# Ignored: the git dependencies (pkcs12_builder, pqckeys, and the RustCrypto crates taken from git
+# through [patch.crates-io]). They move deliberately, and every upstream push would otherwise
+# produce a pull request.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    versioning-strategy: lockfile-only
+    open-pull-requests-limit: 3
+    groups:
+      cargo:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "cbc"
+      - dependency-name: "cms"
+      - dependency-name: "ctr"
+      - dependency-name: "keccak"
+      - dependency-name: "pkcs12"
+      - dependency-name: "pkcs12_builder"
+      - dependency-name: "pqckeys"
+      - dependency-name: "sha3"
+      - dependency-name: "universal-hash"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      actions:
+        patterns:
+          - "*"

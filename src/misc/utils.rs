@@ -93,7 +93,7 @@ pub fn get_file_as_cert(filename: &Path) -> Result<Certificate> {
     Ok(Certificate::from_der(&der_cert)?)
 }
 
-/// Reads a file and returns the contents as a Vec<u8>
+/// Reads a file and returns the contents as a `Vec<u8>`
 pub fn get_file_as_byte_vec(filename: &Path) -> Result<Vec<u8>> {
     match File::open(filename) {
         Ok(mut f) => match std::fs::metadata(filename) {
