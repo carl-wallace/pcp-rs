@@ -44,8 +44,20 @@ Generated Artifacts:
           Full path and filename of the file containing JSON-formatted settings that govern storage of generated artifacts
 ```
 
-When `pcp-rs` is used to generate updated PKITS artifacts, manual steps are required to address some negative test cases,
-i.e., artifacts that support testing invalid signatures.
+Each certificate and CRL keeps its original file name. Its signature is checked against the original issuer's key, and
+where it fails (e.g., `BadSignedCACert`, `InvalidEESignatureTest3EE` and `BadCRLSignatureCACRL` in PKITS), the generated
+signature is corrupted so the negative test carries over. Certificates whose key algorithm has no mapping (e.g., the
+PKITS DSA certificates) are skipped, along with the certificates and CRLs they issued.
+
+A `name_suffix` in the generation settings gives each generated set distinct names by appending text to matching
+directory strings wherever they appear, including in extensions such as name constraints and CRL distribution points:
+
+```json
+	"name_suffix" : {
+		"matching": "Test Certificates 2011",
+		"suffix": "ML-DSA-44"
+	}
+```
 
 The following sections describe generating PKITS clones using ML-DSA-44, ML-DSA-65, and ML-DSA-87. The `pkits.sh` file 
 uses provided settings files to generate clones in the `./target` folder. Generating PKITS clones using SLH-DSA follows

@@ -20,28 +20,6 @@ VARIANTS=(
     pkits_slh_dsa_shake_256f
 )
 
-# Certs whose signature must be altered to introduce a bad signature.
-# - BadSignedCACert: CA cert issued by TrustAnchor with a corrupted sig (PKITS 4.1.2)
-# - InvalidEESignatureTest3EE: EE cert with a bad sig (PKITS 4.1.3)
-# - InvalidDSASignatureTest6EE: EE cert with a bad sig (PKITS 4.1.6)
-BAD_SIG_CERTS=(
-    BadSignedCACert.der
-    InvalidEESignatureTest3EE.der
-    InvalidDSASignatureTest6EE.der
-)
-
-flip_last_byte() {
-    local file="$1"
-    python3 - "$file" <<'PYEOF'
-import sys
-path = sys.argv[1]
-data = bytearray(open(path, 'rb').read())
-data[-1] ^= 0xFF
-open(path, 'wb').write(data)
-print(f"  flipped last byte of {path}")
-PYEOF
-}
-
 BASE="$(cd "$(dirname "$0")" && pwd)/target"
 
 for variant in "${VARIANTS[@]}"; do
@@ -64,16 +42,6 @@ for variant in "${VARIANTS[@]}"; do
     else
         echo "  WARNING: $ta_src not found"
     fi
-
-    # Corrupt last byte of bad-signature certs
-    for cert in "${BAD_SIG_CERTS[@]}"; do
-        f="$dir/certs/$cert"
-        if [ -f "$f" ]; then
-            flip_last_byte "$f"
-        else
-            echo "  WARNING: $cert not found in $dir/certs"
-        fi
-    done
 done
 
 echo ""

@@ -27,7 +27,7 @@ use pkcs12_builder::asn1_utils::parse_pkcs12;
 /// settings the saves the private key and public key per the storage settings.
 pub fn generate(
     input_folder: &str,
-    _generation_settings: &GenerationSettings,
+    generation_settings: &GenerationSettings,
     storage_settings: &StorageSettings,
 ) -> crate::Result<usize> {
     if !Path::is_dir(Path::new(input_folder)) {
@@ -47,7 +47,7 @@ pub fn generate(
                         error!("Recursing {}", path.display());
                         if let Err(_e) = generate(
                             path.to_str().unwrap_or_default(),
-                            _generation_settings,
+                            generation_settings,
                             storage_settings,
                         ) {
                             continue;
@@ -77,9 +77,11 @@ pub fn generate(
                         }
                     };
 
-                    let (oak, cert_bytes, skid) = match storage_settings
-                        .generate_fake_cert(&cert, file.path().to_str().unwrap_or_default())
-                    {
+                    let (oak, cert_bytes, skid) = match storage_settings.generate_fake_cert(
+                        &cert,
+                        file.path().to_str().unwrap_or_default(),
+                        generation_settings.name_suffix.as_ref(),
+                    ) {
                         Ok((oak, cert_bytes, skid)) => (oak, cert_bytes, skid),
                         Err(e) => {
                             error!(
@@ -274,7 +276,7 @@ pub fn generate_and_save_pkcs12(
 /// settings the saves the private key and public key per the storage settings.
 pub fn generate_crls(
     input_folder: &str,
-    _generation_settings: &GenerationSettings,
+    generation_settings: &GenerationSettings,
     storage_settings: &StorageSettings,
 ) -> crate::Result<usize> {
     if !Path::is_dir(Path::new(input_folder)) {
@@ -292,9 +294,9 @@ pub fn generate_crls(
                         && s != input_folder
                     {
                         error!("Recursing {}", path.display());
-                        if let Err(_e) = generate(
+                        if let Err(_e) = generate_crls(
                             path.to_str().unwrap_or_default(),
-                            _generation_settings,
+                            generation_settings,
                             storage_settings,
                         ) {
                             continue;
@@ -321,13 +323,12 @@ pub fn generate_crls(
                         }
                     };
 
-                    if let Err(e) = storage_settings
-                        .generate_fake_crl(&crl_bytes, file.path().to_str().unwrap_or_default())
-                    {
-                        error!(
-                            "Failed to generate fake certificate for {:?}: {e:?}",
-                            file.path()
-                        );
+                    if let Err(e) = storage_settings.generate_fake_crl(
+                        &crl_bytes,
+                        file.path().to_str().unwrap_or_default(),
+                        generation_settings.name_suffix.as_ref(),
+                    ) {
+                        error!("Failed to generate fake CRL for {:?}: {e:?}", file.path());
                         continue;
                     }
                 }
