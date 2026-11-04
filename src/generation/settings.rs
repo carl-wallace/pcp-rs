@@ -6,17 +6,38 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result as SerdeResult;
 use std::path::Path;
 
-use const_oid::{ObjectIdentifier, db::fips204::ID_ML_DSA_44};
+use const_oid::ObjectIdentifier;
 use x509_cert::Certificate;
 
 use crate::misc::utils::get_file_as_byte_vec;
-use crate::{Result, misc::utils::cert_type};
+use crate::{Error, Result, misc::utils::cert_type};
 
 /// Settings controlling which source algorithms are mapped to which target algorithms.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct GenerationSettings {
     /// List of algorithm mappings from source to target OID.
     pub alg_mappings: Vec<AlgMapping>,
+    /// Optional change to names in generated artifacts, used to give each generated set distinct names.
+    #[serde(default)]
+    pub name_suffix: Option<NameSuffix>,
+}
+
+/// Appends `suffix` (after a space) to each directory string that matches `matching`, ignoring
+/// case and whitespace differences, e.g., `O=Test Certificates 2011` becomes
+/// `O=Test Certificates 2011 ML-DSA-44`.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct NameSuffix {
+    /// Directory string value to match
+    pub matching: String,
+    /// Text to append to matching values
+    pub suffix: String,
+}
+
+impl NameSuffix {
+    /// Returns `der` with the suffix appended to matching directory strings.
+    pub fn apply(&self, der: &[u8]) -> Vec<u8> {
+        crate::storage::asn1::append_suffix_to_matching_strings(der, &self.matching, &self.suffix)
+    }
 }
 
 /// Reads a JSON-formatted [GenerationSettings] instance from a file.
@@ -36,6 +57,7 @@ impl Default for GenerationSettings {
     fn default() -> Self {
         Self {
             alg_mappings: vec![AlgMapping::default()],
+            name_suffix: None,
         }
     }
 }
@@ -66,11 +88,8 @@ impl GenerationSettings {
                 }
             }
         }
-        error!(
-            "Failed to map source algorithm for {orig_path}: {}. Using ID_ML_DSA_44.",
-            source_str
-        );
-        Ok(ID_ML_DSA_44)
+        error!("No mapping for source algorithm {source_str} in {orig_path}. Skipping it.");
+        Err(Error::NotFound)
     }
 }
 

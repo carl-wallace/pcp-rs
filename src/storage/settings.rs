@@ -20,8 +20,16 @@ use const_oid::db::fips205::{
     ID_SLH_DSA_SHA_2_256_F, ID_SLH_DSA_SHA_2_256_S, ID_SLH_DSA_SHAKE_128_F, ID_SLH_DSA_SHAKE_128_S,
     ID_SLH_DSA_SHAKE_192_F, ID_SLH_DSA_SHAKE_192_S, ID_SLH_DSA_SHAKE_256_F, ID_SLH_DSA_SHAKE_256_S,
 };
+use const_oid::db::rfc5912::SHA_256_WITH_RSA_ENCRYPTION;
+use der::asn1::BitString;
 use der::{Decode, Encode};
-use spki::SignatureBitStringEncoding;
+use rsa::{
+    RsaPublicKey,
+    pkcs1v15::{Signature as RsaSignature, VerifyingKey},
+};
+use sha2::Sha256;
+use signature::Verifier;
+use spki::{AlgorithmIdentifierOwned, DecodePublicKey, SignatureBitStringEncoding};
 use x509_cert::{
     Certificate, SubjectPublicKeyInfo, TbsCertificate,
     crl::{CertificateList, TbsCertList},
@@ -31,7 +39,8 @@ use pqckeys::oak::{OneAsymmetricKey, PrivateKey};
 
 use crate::{
     Error, Result,
-    misc::utils::get_file_as_byte_vec,
+    generation::settings::NameSuffix,
+    misc::utils::{get_file_as_byte_vec, get_file_as_cert},
     pqc::{
         key_pair::{KeyPair, PqcKeyPair},
         signer::PqcSigner,
@@ -214,29 +223,212 @@ impl StorageSettings {
         Ok(())
     }
 
-    fn generate_fake_tbs_cert(&self, skid: &str) -> Result<FakeTbsCertificate> {
+    /// Loads the generated public key and a signer for the key identified by `skid`.
+    fn load_signer(&self, skid: &str) -> Result<(SubjectPublicKeyInfo, PqcSigner)> {
         let key_storage = Path::new(&self.folder).join("keys");
-
-        // let ee_seed_bytes = get_file_as_byte_vec(&path.join(format!("{skid}.seed")))?;
-        let ee_public_key = get_file_as_byte_vec(
+        let public_key = get_file_as_byte_vec(
             &key_storage.join(format!("{}.spki", self.get_file_name_for_skid(skid))),
         )?;
+        let spki = SubjectPublicKeyInfo::from_der(&public_key)?;
 
-        let orig_name = match self.skid_to_orig_file.get(skid) {
-            Some(name) => name.clone(),
+        let signer = match spki.algorithm.oid {
+            ID_ML_DSA_44 => {
+                let seed_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.seed", self.get_file_name_for_skid(skid))),
+                )?;
+                let seed = B32::try_from(seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(
+                    &seed_bytes,
+                    PqcKeyPair::MlDsa44(Box::new(KeyPair::<MlDsa44>::from_seed(&seed))),
+                )
+            }
+            ID_ML_DSA_65 => {
+                let seed_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.seed", self.get_file_name_for_skid(skid))),
+                )?;
+                let seed = B32::try_from(seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(
+                    &seed_bytes,
+                    PqcKeyPair::MlDsa65(Box::new(KeyPair::<MlDsa65>::from_seed(&seed))),
+                )
+            }
+            ID_ML_DSA_87 => {
+                let seed_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.seed", self.get_file_name_for_skid(skid))),
+                )?;
+                let seed = B32::try_from(seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(
+                    &seed_bytes,
+                    PqcKeyPair::MlDsa87(Box::new(KeyPair::<MlDsa87>::from_seed(&seed))),
+                )
+            }
+            ID_SLH_DSA_SHA_2_128_F => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Sha2_128f>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Sha2_128f(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHA_2_128_S => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Sha2_128s>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Sha2_128s(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHA_2_192_F => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Sha2_192f>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Sha2_192f(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHA_2_192_S => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Sha2_192s>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Sha2_192s(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHA_2_256_F => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Sha2_256f>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Sha2_256f(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHA_2_256_S => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Sha2_256s>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Sha2_256s(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHAKE_128_F => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Shake128f>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Shake128f(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHAKE_128_S => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Shake128s>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Shake128s(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHAKE_192_F => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Shake192f>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Shake192f(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHAKE_192_S => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Shake192s>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Shake192s(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHAKE_256_F => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Shake256f>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Shake256f(Box::new(sk)))
+            }
+            ID_SLH_DSA_SHAKE_256_S => {
+                let priv_bytes = get_file_as_byte_vec(
+                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(skid))),
+                )?;
+                let sk = SigningKey::<Shake256s>::try_from(priv_bytes.as_slice())
+                    .map_err(|_| Error::Unrecognized)?;
+                PqcSigner::new(&[], PqcKeyPair::Shake256s(Box::new(sk)))
+            }
+            _ => return Err(Error::Unrecognized),
+        };
+        Ok((spki, signer))
+    }
+
+    /// Checks the signature on an original artifact using the original certificate for the issuer
+    /// identified by `issuer_skid`. Generated artifacts reproduce a failure here with a bad
+    /// signature, e.g., for BadSignedCACert, InvalidEESignatureTest3EE and BadCRLSignatureCACRL.
+    fn orig_signature_verifies(
+        &self,
+        issuer_skid: &str,
+        defer: &DeferDecodeSigned,
+    ) -> Result<bool> {
+        let issuer_file = match self.skid_to_orig_file.get(issuer_skid) {
+            Some(name) => name,
             None => {
-                error!("Did not find original cert for {skid}");
+                error!("Did not find original cert for {issuer_skid}");
                 return Err(Error::Unrecognized);
             }
         };
+        let issuer = get_file_as_cert(Path::new(issuer_file))?;
+        if defer.signature_algorithm.oid != SHA_256_WITH_RSA_ENCRYPTION {
+            error!(
+                "Unable to check original signature with algorithm {}. Treating it as good.",
+                defer.signature_algorithm.oid
+            );
+            return Ok(true);
+        }
+        let spki_der = issuer
+            .tbs_certificate()
+            .subject_public_key_info()
+            .to_der()?;
+        let public_key = RsaPublicKey::from_public_key_der(&spki_der).map_err(|_| Error::Rsa)?;
+        let verifying_key = VerifyingKey::<Sha256>::new(public_key);
+        let signature =
+            RsaSignature::try_from(defer.signature.raw_bytes()).map_err(|_| Error::Rsa)?;
+        Ok(verifying_key
+            .verify(defer.tbs_field.as_slice(), &signature)
+            .is_ok())
+    }
+
+    /// Signs `tbs`, corrupting the signature if `good` is false.
+    fn sign(signer: &PqcSigner, tbs: &[u8], good: bool) -> Result<BitString> {
+        let mut sig = signer.sign(tbs)?.to_bitstring()?.raw_bytes().to_vec();
+        if !good && let Some(last) = sig.last_mut() {
+            *last ^= 0xFF;
+        }
+        Ok(BitString::from_bytes(&sig)?)
+    }
+
+    fn generate_fake_tbs_cert(
+        &self,
+        skid: &str,
+        orig_tbs: &[u8],
+        issuer_alg: &AlgorithmIdentifierOwned,
+        name_suffix: Option<&NameSuffix>,
+    ) -> Result<FakeTbsCertificate> {
+        let key_storage = Path::new(&self.folder).join("keys");
+
+        let ee_public_key = get_file_as_byte_vec(
+            &key_storage.join(format!("{}.spki", self.get_file_name_for_skid(skid))),
+        )?;
         let fake_ee_spki = SubjectPublicKeyInfo::from_der(&ee_public_key)?;
-        let orig_cert = get_file_as_byte_vec(Path::new(&orig_name))?;
-        let defer = DeferDecodeSigned::from_der(&orig_cert)?;
-        let orig_tbs = TbsCertificate::from_der(&defer.tbs_field)?;
+        let orig_tbs = match name_suffix {
+            Some(ns) => TbsCertificate::from_der(&ns.apply(orig_tbs))?,
+            None => TbsCertificate::from_der(orig_tbs)?,
+        };
         let fake_tbs = FakeTbsCertificate {
             version: orig_tbs.version(),
             serial_number: orig_tbs.serial_number().clone(),
-            signature: fake_ee_spki.algorithm.clone(),
+            signature: issuer_alg.clone(),
             issuer: orig_tbs.issuer().clone(),
             validity: *orig_tbs.validity(),
             subject: orig_tbs.subject().clone(),
@@ -248,170 +440,48 @@ impl StorageSettings {
         Ok(fake_tbs)
     }
 
-    /// Re-signs a CRL using the stored key for its issuer and saves it to the output folder.
-    pub fn generate_fake_crl(&self, crl_bytes: &[u8], orig_path: &str) -> Result<()> {
+    /// Re-signs a CRL using the stored key for its issuer and saves it to the output folder using
+    /// the original file name.
+    pub fn generate_fake_crl(
+        &self,
+        crl_bytes: &[u8],
+        orig_path: &str,
+        name_suffix: Option<&NameSuffix>,
+    ) -> Result<()> {
         let crl = CertificateList::from_der(crl_bytes)?;
         let akid = asn1::get_akid_from_crl(&crl, orig_path)?;
         let defer = DeferDecodeSigned::from_der(crl_bytes)?;
+        let good = self.orig_signature_verifies(&akid, &defer)?;
 
-        // Load CA key material
-        let key_storage = Path::new(&self.folder).join("keys");
-        let ca_public_key = get_file_as_byte_vec(
-            &key_storage.join(format!("{}.spki", self.get_file_name_for_skid(&akid))),
-        )?;
-        let fake_ca_spki = SubjectPublicKeyInfo::from_der(&ca_public_key)?;
+        let (fake_ca_spki, pqc_signer) = self.load_signer(&akid)?;
 
-        let pqc_signer = match fake_ca_spki.algorithm.oid {
-            ID_ML_DSA_44 => {
-                let ca_seed_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.seed", self.get_file_name_for_skid(&akid))),
-                )?;
-                let ca_seed =
-                    B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(
-                    &ca_seed_bytes,
-                    PqcKeyPair::MlDsa44(Box::new(KeyPair::<MlDsa44>::from_seed(&ca_seed))),
-                )
-            }
-            ID_ML_DSA_65 => {
-                let ca_seed_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.seed", self.get_file_name_for_skid(&akid))),
-                )?;
-                let ca_seed =
-                    B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(
-                    &ca_seed_bytes,
-                    PqcKeyPair::MlDsa65(Box::new(KeyPair::<MlDsa65>::from_seed(&ca_seed))),
-                )
-            }
-            ID_ML_DSA_87 => {
-                let ca_seed_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.seed", self.get_file_name_for_skid(&akid))),
-                )?;
-                let ca_seed =
-                    B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(
-                    &ca_seed_bytes,
-                    PqcKeyPair::MlDsa87(Box::new(KeyPair::<MlDsa87>::from_seed(&ca_seed))),
-                )
-            }
-            ID_SLH_DSA_SHA_2_128_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_128f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_128f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHA_2_128_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_128s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_128s(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHA_2_192_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_192f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_192f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHA_2_192_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_192s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_192s(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHA_2_256_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_256f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_256f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHA_2_256_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_256s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_256s(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_128_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake128f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake128f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_128_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake128s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake128s(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_192_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake192f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake192f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_192_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake192s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake192s(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_256_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake256f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake256f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_256_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake256s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake256s(Box::new(sk)))
-            }
-            _ => return Err(Error::Unrecognized),
+        let tbs_der = match name_suffix {
+            Some(ns) => ns.apply(&defer.tbs_field),
+            None => defer.tbs_field.clone(),
         };
+        let mut tbs_cert_list = TbsCertList::from_der(&tbs_der)?;
+        tbs_cert_list.signature = fake_ca_spki.algorithm.clone();
+        let der_tbs_cert_list = tbs_cert_list.to_der()?;
 
-        let message_to_verify = defer.tbs_field.as_slice();
-        let sig = pqc_signer.sign(message_to_verify)?;
-
-        let tbs_cert_list = TbsCertList::from_der(defer.tbs_field.as_slice())?;
-        let fake_cert = FakeCrl {
+        let fake_crl = FakeCrl {
             tbs_cert_list,
             signature_algorithm: fake_ca_spki.algorithm.clone(),
-            signature: sig.to_bitstring()?,
+            signature: Self::sign(&pqc_signer, &der_tbs_cert_list, good)?,
         };
-        let der_fake_cert = fake_cert.to_der()?;
+        let der_fake_crl = fake_crl.to_der()?;
 
+        let file_name = match Path::new(orig_path).file_name() {
+            Some(file_name) => file_name,
+            None => {
+                error!("Failed to get file name from {orig_path}");
+                return Err(Error::Unrecognized);
+            }
+        };
         let crl_storage = Path::new(&self.folder).join("crls");
-        let mut pub_file =
-            File::create(crl_storage.join(format!("{}.crl", self.get_file_name_for_skid(&akid))))?;
-        if let Err(e) = pub_file.write_all(&der_fake_cert) {
-            error!(
-                "Failed to write private key generated for {orig_path} to file ({akid}): {e}. Ignoring and continuing..."
-            );
+        let mut crl_file = File::create(crl_storage.join(file_name))?;
+        if let Err(e) = crl_file.write_all(&der_fake_crl) {
+            error!("Failed to write CRL generated for {orig_path} to file ({akid}): {e}.");
+            return Err(Error::Io);
         }
         Ok(())
     }
@@ -421,6 +491,7 @@ impl StorageSettings {
         &self,
         cert: &Certificate,
         orig_path: &str,
+        name_suffix: Option<&NameSuffix>,
     ) -> Result<(Vec<u8>, Vec<u8>, String)> {
         let skid = match asn1::get_skid(cert) {
             Ok(h) => h,
@@ -436,160 +507,28 @@ impl StorageSettings {
                 return Err(e);
             }
         };
-        let fake_tbs = self.generate_fake_tbs_cert(&skid)?;
+        let orig_cert = get_file_as_byte_vec(Path::new(orig_path))?;
+        let defer = DeferDecodeSigned::from_der(&orig_cert)?;
+        let good = self.orig_signature_verifies(&akid, &defer)?;
 
-        // Load CA key material
-        let key_storage = Path::new(&self.folder).join("keys");
-        let ca_public_key = get_file_as_byte_vec(
-            &key_storage.join(format!("{}.spki", self.get_file_name_for_skid(&akid))),
+        let (fake_ca_spki, pqc_signer) = self.load_signer(&akid)?;
+        let fake_tbs = self.generate_fake_tbs_cert(
+            &skid,
+            &defer.tbs_field,
+            &fake_ca_spki.algorithm,
+            name_suffix,
         )?;
-        let fake_ca_spki = SubjectPublicKeyInfo::from_der(&ca_public_key)?;
-
         let der_fake_tbs = fake_tbs.to_der()?;
-        let message_to_verify = der_fake_tbs.as_slice();
-        let pqc_signer = match fake_ca_spki.algorithm.oid {
-            ID_ML_DSA_44 => {
-                let ca_seed_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.seed", self.get_file_name_for_skid(&akid))),
-                )?;
-                let ca_seed =
-                    B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(
-                    &ca_seed_bytes,
-                    PqcKeyPair::MlDsa44(Box::new(KeyPair::<MlDsa44>::from_seed(&ca_seed))),
-                )
-            }
-            ID_ML_DSA_65 => {
-                let ca_seed_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.seed", self.get_file_name_for_skid(&akid))),
-                )?;
-                let ca_seed =
-                    B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(
-                    &ca_seed_bytes,
-                    PqcKeyPair::MlDsa65(Box::new(KeyPair::<MlDsa65>::from_seed(&ca_seed))),
-                )
-            }
-            ID_ML_DSA_87 => {
-                let ca_seed_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.seed", self.get_file_name_for_skid(&akid))),
-                )?;
-                let ca_seed =
-                    B32::try_from(ca_seed_bytes.as_slice()).map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(
-                    &ca_seed_bytes,
-                    PqcKeyPair::MlDsa87(Box::new(KeyPair::<MlDsa87>::from_seed(&ca_seed))),
-                )
-            }
-            ID_SLH_DSA_SHA_2_128_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_128f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_128f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHA_2_128_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_128s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_128s(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHA_2_192_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_192f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_192f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHA_2_192_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_192s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_192s(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHA_2_256_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_256f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_256f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHA_2_256_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Sha2_256s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Sha2_256s(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_128_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake128f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake128f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_128_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake128s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake128s(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_192_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake192f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake192f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_192_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake192s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake192s(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_256_F => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake256f>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake256f(Box::new(sk)))
-            }
-            ID_SLH_DSA_SHAKE_256_S => {
-                let priv_bytes = get_file_as_byte_vec(
-                    &key_storage.join(format!("{}.priv", self.get_file_name_for_skid(&akid))),
-                )?;
-                let sk = SigningKey::<Shake256s>::try_from(priv_bytes.as_slice())
-                    .map_err(|_| Error::Unrecognized)?;
-                PqcSigner::new(&[], PqcKeyPair::Shake256s(Box::new(sk)))
-            }
-            _ => return Err(Error::Unrecognized),
-        };
-
-        let sig = pqc_signer.sign(message_to_verify)?;
 
         let private_key_alg = fake_tbs.subject_public_key_info.algorithm.clone();
         let fake_cert = FakeCertificate {
             tbs_certificate: fake_tbs,
             signature_algorithm: fake_ca_spki.algorithm.clone(),
-            signature: sig.to_bitstring()?,
+            signature: Self::sign(&pqc_signer, &der_fake_tbs, good)?,
         };
         let der_fake_cert = fake_cert.to_der()?;
 
+        let key_storage = Path::new(&self.folder).join("keys");
         let cert_storage = Path::new(&self.folder).join("certs");
 
         let mut pub_file =

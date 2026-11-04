@@ -1,1 +1,12 @@
-{"alg_mappings":[{"source_alg":"1.2.840.113549.1.1.1","target_alg":"2.16.840.1.101.3.4.3.24"}]}
+{
+	"alg_mappings" : [
+		{
+		"source_alg": "1.2.840.113549.1.1.1",
+		"target_alg": "2.16.840.1.101.3.4.3.24"
+		}
+	],
+	"name_suffix" : {
+		"matching": "Test Certificates 2011",
+		"suffix": "SLH-DSA-SHA2-256s"
+	}
+}
