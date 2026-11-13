@@ -39,7 +39,7 @@ use pqckeys::oak::{OneAsymmetricKey, PrivateKey};
 
 use crate::{
     Error, Result,
-    generation::settings::NameSuffix,
+    generation::settings::GenerationSettings,
     misc::utils::{get_file_as_byte_vec, get_file_as_cert},
     pqc::{
         key_pair::{KeyPair, PqcKeyPair},
@@ -139,6 +139,14 @@ impl StorageSettings {
         }
     }
 
+    /// Records `orig_path` as the original file for the SKID of `cert`, as saving a key pair for
+    /// it does, without generating or saving a key pair.
+    pub fn record_skid(&mut self, cert: &Certificate, orig_path: &str) -> Result<()> {
+        let skid = asn1::get_skid(cert)?;
+        self.skid_to_orig_file.insert(skid, orig_path.to_string());
+        Ok(())
+    }
+
     /// Gets the original filename that corresponds to the SKID.
     pub fn get_file_name_for_skid(&self, skid: &str) -> String {
         if let Some(v) = self.skid_to_orig_file.get(skid) {
@@ -224,7 +232,7 @@ impl StorageSettings {
     }
 
     /// Loads the generated public key and a signer for the key identified by `skid`.
-    fn load_signer(&self, skid: &str) -> Result<(SubjectPublicKeyInfo, PqcSigner)> {
+    pub(crate) fn load_signer(&self, skid: &str) -> Result<(SubjectPublicKeyInfo, PqcSigner)> {
         let key_storage = Path::new(&self.folder).join("keys");
         let public_key = get_file_as_byte_vec(
             &key_storage.join(format!("{}.spki", self.get_file_name_for_skid(skid))),
@@ -366,7 +374,7 @@ impl StorageSettings {
     /// Checks the signature on an original artifact using the original certificate for the issuer
     /// identified by `issuer_skid`. Generated artifacts reproduce a failure here with a bad
     /// signature, e.g., for BadSignedCACert, InvalidEESignatureTest3EE and BadCRLSignatureCACRL.
-    fn orig_signature_verifies(
+    pub(crate) fn orig_signature_verifies(
         &self,
         issuer_skid: &str,
         defer: &DeferDecodeSigned,
@@ -400,7 +408,7 @@ impl StorageSettings {
     }
 
     /// Signs `tbs`, corrupting the signature if `good` is false.
-    fn sign(signer: &PqcSigner, tbs: &[u8], good: bool) -> Result<BitString> {
+    pub(crate) fn sign(signer: &PqcSigner, tbs: &[u8], good: bool) -> Result<BitString> {
         let mut sig = signer.sign(tbs)?.to_bitstring()?.raw_bytes().to_vec();
         if !good && let Some(last) = sig.last_mut() {
             *last ^= 0xFF;
@@ -413,7 +421,7 @@ impl StorageSettings {
         skid: &str,
         orig_tbs: &[u8],
         issuer_alg: &AlgorithmIdentifierOwned,
-        name_suffix: Option<&NameSuffix>,
+        generation_settings: &GenerationSettings,
     ) -> Result<FakeTbsCertificate> {
         let key_storage = Path::new(&self.folder).join("keys");
 
@@ -421,10 +429,7 @@ impl StorageSettings {
             &key_storage.join(format!("{}.spki", self.get_file_name_for_skid(skid))),
         )?;
         let fake_ee_spki = SubjectPublicKeyInfo::from_der(&ee_public_key)?;
-        let orig_tbs = match name_suffix {
-            Some(ns) => TbsCertificate::from_der(&ns.apply(orig_tbs))?,
-            None => TbsCertificate::from_der(orig_tbs)?,
-        };
+        let orig_tbs = TbsCertificate::from_der(&generation_settings.rename(orig_tbs))?;
         let fake_tbs = FakeTbsCertificate {
             version: orig_tbs.version(),
             serial_number: orig_tbs.serial_number().clone(),
@@ -446,7 +451,7 @@ impl StorageSettings {
         &self,
         crl_bytes: &[u8],
         orig_path: &str,
-        name_suffix: Option<&NameSuffix>,
+        generation_settings: &GenerationSettings,
     ) -> Result<()> {
         let crl = CertificateList::from_der(crl_bytes)?;
         let akid = asn1::get_akid_from_crl(&crl, orig_path)?;
@@ -455,12 +460,14 @@ impl StorageSettings {
 
         let (fake_ca_spki, pqc_signer) = self.load_signer(&akid)?;
 
-        let tbs_der = match name_suffix {
-            Some(ns) => ns.apply(&defer.tbs_field),
-            None => defer.tbs_field.clone(),
-        };
+        let tbs_der = generation_settings.rename(&defer.tbs_field);
         let mut tbs_cert_list = TbsCertList::from_der(&tbs_der)?;
         tbs_cert_list.signature = fake_ca_spki.algorithm.clone();
+        if generation_settings.regenerate_key_identifiers
+            && let Some(exts) = tbs_cert_list.crl_extensions.as_mut()
+        {
+            asn1::replace_key_identifiers(exts, None, &asn1::key_identifier(&fake_ca_spki))?;
+        }
         let der_tbs_cert_list = tbs_cert_list.to_der()?;
 
         let fake_crl = FakeCrl {
@@ -491,7 +498,7 @@ impl StorageSettings {
         &self,
         cert: &Certificate,
         orig_path: &str,
-        name_suffix: Option<&NameSuffix>,
+        generation_settings: &GenerationSettings,
     ) -> Result<(Vec<u8>, Vec<u8>, String)> {
         let skid = match asn1::get_skid(cert) {
             Ok(h) => h,
@@ -512,12 +519,18 @@ impl StorageSettings {
         let good = self.orig_signature_verifies(&akid, &defer)?;
 
         let (fake_ca_spki, pqc_signer) = self.load_signer(&akid)?;
-        let fake_tbs = self.generate_fake_tbs_cert(
+        let mut fake_tbs = self.generate_fake_tbs_cert(
             &skid,
             &defer.tbs_field,
             &fake_ca_spki.algorithm,
-            name_suffix,
+            generation_settings,
         )?;
+        if generation_settings.regenerate_key_identifiers
+            && let Some(exts) = fake_tbs.extensions.as_mut()
+        {
+            let skid = asn1::key_identifier(&fake_tbs.subject_public_key_info);
+            asn1::replace_key_identifiers(exts, Some(&skid), &asn1::key_identifier(&fake_ca_spki))?;
+        }
         let der_fake_tbs = fake_tbs.to_der()?;
 
         let private_key_alg = fake_tbs.subject_public_key_info.algorithm.clone();

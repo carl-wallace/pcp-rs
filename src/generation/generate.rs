@@ -80,7 +80,7 @@ pub fn generate(
                     let (oak, cert_bytes, skid) = match storage_settings.generate_fake_cert(
                         &cert,
                         file.path().to_str().unwrap_or_default(),
-                        generation_settings.name_suffix.as_ref(),
+                        generation_settings,
                     ) {
                         Ok((oak, cert_bytes, skid)) => (oak, cert_bytes, skid),
                         Err(e) => {
@@ -326,7 +326,7 @@ pub fn generate_crls(
                     if let Err(e) = storage_settings.generate_fake_crl(
                         &crl_bytes,
                         file.path().to_str().unwrap_or_default(),
-                        generation_settings.name_suffix.as_ref(),
+                        generation_settings,
                     ) {
                         error!("Failed to generate fake CRL for {:?}: {e:?}", file.path());
                         continue;

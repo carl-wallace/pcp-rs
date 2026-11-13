@@ -1,5 +1,7 @@
 //! Generation-related settings
 
+extern crate alloc;
+use alloc::collections::BTreeSet;
 use core::str::FromStr;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -20,6 +22,23 @@ pub struct GenerationSettings {
     /// Optional change to names in generated artifacts, used to give each generated set distinct names.
     #[serde(default)]
     pub name_suffix: Option<NameSuffix>,
+    /// Replace each SKID with one computed from the generated key (RFC 7093 method 1) and each
+    /// AKID key identifier with the issuer's, rather than keeping the values from the original
+    /// artifacts, which identify the original keys.
+    #[serde(default)]
+    pub regenerate_key_identifiers: bool,
+    /// Optional text appended to the most specific attribute of each CA name, i.e., each name that
+    /// appears as an issuer, usually a common name, used to give the CAs and trust anchors in a
+    /// generated set names distinct from the original ones while leaving end entity names and
+    /// the names in name constraints unchanged. Applied wherever a matching directory string
+    /// appears, as for [NameSuffix], once [GenerationSettings::resolve_ca_names] has collected the
+    /// values from the certificates being cloned.
+    #[serde(default)]
+    pub ca_name_suffix: Option<String>,
+    /// The most specific attribute values of the CA names in the certificates being cloned, to
+    /// which `ca_name_suffix` is appended
+    #[serde(skip)]
+    pub ca_names: BTreeSet<String>,
 }
 
 /// Appends `suffix` (after a space) to each directory string that matches `matching`, ignoring
@@ -36,7 +55,11 @@ pub struct NameSuffix {
 impl NameSuffix {
     /// Returns `der` with the suffix appended to matching directory strings.
     pub fn apply(&self, der: &[u8]) -> Vec<u8> {
-        crate::storage::asn1::append_suffix_to_matching_strings(der, &self.matching, &self.suffix)
+        crate::storage::asn1::append_suffix_to_matching_strings(
+            der,
+            [self.matching.as_str()],
+            &self.suffix,
+        )
     }
 }
 
@@ -58,11 +81,53 @@ impl Default for GenerationSettings {
         Self {
             alg_mappings: vec![AlgMapping::default()],
             name_suffix: None,
+            regenerate_key_identifiers: false,
+            ca_name_suffix: None,
+            ca_names: BTreeSet::new(),
         }
     }
 }
 
 impl GenerationSettings {
+    /// Returns `der` with `name_suffix` and `ca_name_suffix` applied to the names in it.
+    pub fn rename(&self, der: &[u8]) -> Vec<u8> {
+        let der = match &self.name_suffix {
+            Some(name_suffix) => name_suffix.apply(der),
+            None => der.to_vec(),
+        };
+        if let Some(suffix) = &self.ca_name_suffix
+            && !self.ca_names.is_empty()
+        {
+            return crate::storage::asn1::append_suffix_to_matching_strings(
+                &der,
+                self.ca_names.iter().map(String::as_str),
+                suffix,
+            );
+        }
+        der
+    }
+
+    /// Collects the most specific attribute value of each issuer name in `certs_folder` into
+    /// `ca_names` when `ca_name_suffix` is set. Any certificate's issuer is a CA, whether or not
+    /// its own certificate asserts cA, which some PKITS CAs deliberately do not.
+    pub fn resolve_ca_names(&mut self, certs_folder: &str) {
+        if self.ca_name_suffix.is_none() {
+            return;
+        }
+        let mut names = BTreeSet::new();
+        for entry in walkdir::WalkDir::new(certs_folder).into_iter().flatten() {
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            if let Ok(cert) = crate::misc::utils::get_file_as_cert(entry.path()) {
+                names.extend(crate::storage::asn1::most_specific_value(
+                    cert.tbs_certificate().issuer(),
+                ));
+            }
+        }
+        self.ca_names = names;
+    }
+
     /// Tries to load [GenerationSettings] from a file (currently unimplemented; returns default).
     pub fn try_from(_file: &str) -> Result<Self> {
         // todo

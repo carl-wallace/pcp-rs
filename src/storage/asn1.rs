@@ -1,8 +1,15 @@
 //! ASN.1 structures used to generate facsimile artifacts
 
+extern crate alloc;
+use alloc::collections::BTreeSet;
 use log::error;
 
-use der::{Decode, Sequence, ValueOrd, asn1::BitString};
+use const_oid::db::rfc5280::{ID_CE_AUTHORITY_KEY_IDENTIFIER, ID_CE_SUBJECT_KEY_IDENTIFIER};
+use der::{
+    Decode, Encode, Sequence, ValueOrd,
+    asn1::{BitString, OctetString},
+};
+use sha2::{Digest, Sha256};
 use spki::{
     AlgorithmIdentifierOwned, AlgorithmIdentifierOwned as AlgorithmIdentifier,
     SubjectPublicKeyInfoOwned as SubjectPublicKeyInfo,
@@ -12,6 +19,7 @@ use x509_cert::{
     crl::CertificateList,
     crl::TbsCertList,
     ext,
+    ext::Extension,
     ext::pkix::{AuthorityKeyIdentifier, SubjectKeyIdentifier},
     name::Name,
     serial_number::SerialNumber,
@@ -103,6 +111,42 @@ pub struct FakeCrl {
     pub signature: BitString,
 }
 
+/// Returns the value of the most specific attribute in `name`, i.e., the last attribute of its last
+/// relative distinguished name, e.g., the common name in `C=US, O=Example, CN=Example CA`.
+pub fn most_specific_value(name: &Name) -> Option<String> {
+    name.iter()
+        .last()
+        .map(|atv| String::from_utf8_lossy(atv.value.value()).into_owned())
+}
+
+/// Returns the key identifier for `spki` per RFC 7093 Section 2 method 1, i.e., the leftmost 160
+/// bits of the SHA-256 hash of the value of the subjectPublicKey BIT STRING.
+pub fn key_identifier(spki: &SubjectPublicKeyInfo) -> Vec<u8> {
+    Sha256::digest(spki.subject_public_key.raw_bytes())[..20].to_vec()
+}
+
+/// Sets the SKID in `extensions` to `skid`, when given, and the keyIdentifier in the AKID to
+/// `akid`. Other AKID fields are left unchanged, as are extensions that are absent.
+pub fn replace_key_identifiers(
+    extensions: &mut [Extension],
+    skid: Option<&[u8]>,
+    akid: &[u8],
+) -> crate::Result<()> {
+    for ext in extensions.iter_mut() {
+        if ext.extn_id == ID_CE_SUBJECT_KEY_IDENTIFIER
+            && let Some(skid) = skid
+        {
+            let value = SubjectKeyIdentifier(OctetString::new(skid)?).to_der()?;
+            ext.extn_value = OctetString::new(value)?;
+        } else if ext.extn_id == ID_CE_AUTHORITY_KEY_IDENTIFIER {
+            let mut value = AuthorityKeyIdentifier::from_der(ext.extn_value.as_bytes())?;
+            value.key_identifier = Some(OctetString::new(akid)?);
+            ext.extn_value = OctetString::new(value.to_der()?)?;
+        }
+    }
+    Ok(())
+}
+
 /// Gets the key identifier values from an AKID extension, and failing that tries to get a value
 /// from a SKID extension.
 pub fn get_akid(cert: &Certificate) -> crate::Result<String> {
@@ -139,8 +183,12 @@ pub fn get_skid(cert: &Certificate) -> crate::Result<String> {
 /// constructed values and into OCTET STRINGs that contain DER (i.e., extension values), so names
 /// in name constraints, CRL distribution points, AKID issuers, etc. change along with subject and
 /// issuer names. Values that do not match are re-emitted unchanged.
-pub fn append_suffix_to_matching_strings(der: &[u8], matching: &str, suffix: &str) -> Vec<u8> {
-    let matching = normalize_string(matching);
+pub fn append_suffix_to_matching_strings<'a>(
+    der: &[u8],
+    matching: impl IntoIterator<Item = &'a str>,
+    suffix: &str,
+) -> Vec<u8> {
+    let matching: BTreeSet<String> = matching.into_iter().map(normalize_string).collect();
     match rewrite_tlvs(der, &matching, suffix) {
         Some((rewritten, true)) => rewritten,
         _ => der.to_vec(),
@@ -194,7 +242,7 @@ fn encode_length(len: usize, out: &mut Vec<u8>) {
 
 /// Rewrites the series of TLVs in `buf`. Returns None if `buf` is not a series of TLVs, else the
 /// rewritten bytes and whether anything changed.
-fn rewrite_tlvs(buf: &[u8], matching: &str, suffix: &str) -> Option<(Vec<u8>, bool)> {
+fn rewrite_tlvs(buf: &[u8], matching: &BTreeSet<String>, suffix: &str) -> Option<(Vec<u8>, bool)> {
     const OCTET_STRING: u8 = 0x04;
     const UTF8_STRING: u8 = 0x0C;
     const PRINTABLE_STRING: u8 = 0x13;
@@ -218,7 +266,7 @@ fn rewrite_tlvs(buf: &[u8], matching: &str, suffix: &str) -> Option<(Vec<u8>, bo
                 _ => None,
             }
         } else if [UTF8_STRING, PRINTABLE_STRING, TELETEX_STRING].contains(&tag)
-            && normalize_string(&String::from_utf8_lossy(content)) == matching
+            && matching.contains(&normalize_string(&String::from_utf8_lossy(content)))
         {
             let mut c = content.to_vec();
             c.push(b' ');

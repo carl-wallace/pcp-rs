@@ -3,6 +3,10 @@ name = "pcp-rs"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+# Reading PKCS #12 files that use legacy algorithms, e.g., the stock PKITS files
+legacy_p12 = ["pkcs12_builder/legacy"]
+
 [dependencies]
 # ASN.1 encoding/decoding and related support from RustCrypto community
 cms = { version = "0.3.0-rc.2", features = ["builder"] }

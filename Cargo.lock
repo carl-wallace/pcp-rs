@@ -533,6 +533,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "des"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "916a94e407b54f9034d71dd748234cd1e516ced6284009906ae246f177eafe5a"
+dependencies = [
+ "cipher",
+]
+
+[[package]]
 name = "destructure_traitobject"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1228,16 +1237,20 @@ name = "pkcs12_builder"
 version = "0.1.1"
 source = "git+https://github.com/carl-wallace/pkcs12_builder.git#551ca103073e4558d05324d5f0bc00a093e9d3a6"
 dependencies = [
+ "cbc",
  "cms",
  "const-oid",
  "crypto-common",
  "der",
+ "des",
  "hmac",
  "log",
  "pkcs12",
  "pkcs5",
  "pkcs8",
  "rand_core 0.10.1",
+ "rc2",
+ "sha1",
  "sha2",
  "spki",
  "subtle",
@@ -1255,9 +1268,11 @@ dependencies = [
  "aes-gcm",
  "cbc",
  "der",
+ "des",
  "pbkdf2",
  "rand_core 0.10.1",
  "scrypt",
+ "sha1",
  "sha2",
  "spki",
 ]
@@ -1416,6 +1431,15 @@ name = "rand_core"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
+
+[[package]]
+name = "rc2"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ceda21af1ae61033b63175653a1af86cae399d79cd03ca80ba347eb3a6c4a7fe"
+dependencies = [
+ "cipher",
+]
 
 [[package]]
 name = "redox_syscall"

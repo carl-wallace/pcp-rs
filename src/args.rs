@@ -59,4 +59,27 @@ pub struct PcpArgs {
     /// storage of generated artifacts
     #[clap(help_heading = "Generated Artifacts", long, short)]
     pub storage_settings: Option<String>,
+
+    // ------------------------------------------------------------------------------------------
+    // Turducken
+    // ------------------------------------------------------------------------------------------
+    /// Full path and name of the folder containing a set generated from `certs-folder` without a
+    /// name suffix. When present, outer and alternate end entity certificates per
+    /// draft-davidben-lamps-turducken-certs are generated instead of a new set, with alternates
+    /// signed by the CA keys in this folder's `keys` folder.
+    #[clap(
+        help_heading = "Turducken",
+        long,
+        requires_all = ["turducken_outer_keys", "turducken_output"]
+    )]
+    pub turducken_alt_folder: Option<String>,
+
+    /// Full path and name of the folder containing PKCS #12 files for the CAs in `certs-folder`,
+    /// used to sign the outer certificates. The stock PKITS files require the `legacy_p12` feature.
+    #[clap(help_heading = "Turducken", long, requires = "turducken_alt_folder")]
+    pub turducken_outer_keys: Option<String>,
+
+    /// Full path and name of the folder to receive the `outer` and `alternate` folders.
+    #[clap(help_heading = "Turducken", long, requires = "turducken_alt_folder")]
+    pub turducken_output: Option<String>,
 }

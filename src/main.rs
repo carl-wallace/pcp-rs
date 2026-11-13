@@ -24,6 +24,7 @@ pub mod logging;
 pub mod misc;
 pub mod pqc;
 pub mod storage;
+pub mod turducken;
 
 use crate::generation::generate::{generate, generate_crls};
 use crate::generation::ingest::ingest;
@@ -65,16 +66,32 @@ fn main() {
     let args = PcpArgs::parse();
     configure_logging(&args);
 
+    let mut generation_settings = if let Some(generation_settings) = args.generation_settings {
+        read_generation_settings(&generation_settings)
+    } else {
+        GenerationSettings::default()
+    };
+    generation_settings.resolve_ca_names(&args.certs_folder);
+
+    if let (Some(alt_folder), Some(outer_keys), Some(output)) = (
+        &args.turducken_alt_folder,
+        &args.turducken_outer_keys,
+        &args.turducken_output,
+    ) {
+        let _ = turducken::generate(
+            &args.certs_folder,
+            alt_folder,
+            outer_keys,
+            output,
+            &generation_settings,
+        );
+        return;
+    }
+
     let mut storage_settings = if let Some(storage_settings) = args.storage_settings {
         read_storage_settings(&storage_settings)
     } else {
         StorageSettings::default()
-    };
-
-    let generation_settings = if let Some(generation_settings) = args.generation_settings {
-        read_generation_settings(&generation_settings)
-    } else {
-        GenerationSettings::default()
     };
 
     let _ = ingest(
