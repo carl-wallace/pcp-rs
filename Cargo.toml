@@ -5,13 +5,13 @@ edition = "2024"
 
 [dependencies]
 # ASN.1 encoding/decoding and related support from RustCrypto community
-cms = { version = "0.3.0-pre.2", features = ["builder"] }
+cms = { version = "0.3.0-rc.2", features = ["builder"] }
 const-oid = { version = "0.10.2", features = ["db"] }
 der = { version = "0.8.0", features = ["alloc", "derive", "oid", "pem"] }
 pem-rfc7468 = "1.0.0"
 pkcs5 = "0.8.1"
 pkcs8 = { version = "0.11.0", features = ["encryption"] }
-pkcs12 = { version = "0.2.0-pre.0", features = ["kdf"] }
+pkcs12 = { version = "0.2.0-rc.0", features = ["kdf"] }
 spki = "0.8.0"
 x509-cert = { version = "0.3.0", features = ["hazmat", "builder"] }
 
@@ -37,9 +37,9 @@ ml-kem = { version = "0.3.2" }
 p256 = {version = "0.14.0", default-features = false, features = ["ecdsa", "pkcs8"]}
 p384 = {version = "0.14.0", default-features = false, features = ["ecdsa", "pkcs8"]}
 p521 = {version = "0.14.0", default-features = false, features = ["ecdsa", "pkcs8"]}
-rsa = { version = "0.10.0-rc.19", features = ["sha2"] }
+rsa = { version = "0.10.0" }
 sha2 = "0.11.0"
-sha3 = "0.11.0"
+sha3 = "0.12.0"
 signature = { version = "3.0.0", features = ["digest", "alloc"]}
 slh-dsa = "0.2.0-rc.5"
 tari-tiny-keccak = { version = "2.0.2", features = ["kmac"] }
@@ -67,6 +67,3 @@ serde_json = {version = "1.0.149", default-features = false, features = ["alloc"
 log = "0.4.29"
 log4rs = "1.4.0"
 
-[patch.crates-io]
-cms           = { git = "https://github.com/RustCrypto/formats.git" }
-pkcs12     = { git = "https://github.com/RustCrypto/formats.git" }

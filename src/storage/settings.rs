@@ -24,7 +24,7 @@ use const_oid::db::rfc5912::SHA_256_WITH_RSA_ENCRYPTION;
 use der::asn1::BitString;
 use der::{Decode, Encode};
 use rsa::{
-    RsaPublicKey,
+    PublicKey,
     pkcs1v15::{Signature as RsaSignature, VerifyingKey},
 };
 use sha2::Sha256;
@@ -390,7 +390,7 @@ impl StorageSettings {
             .tbs_certificate()
             .subject_public_key_info()
             .to_der()?;
-        let public_key = RsaPublicKey::from_public_key_der(&spki_der).map_err(|_| Error::Rsa)?;
+        let public_key = PublicKey::from_public_key_der(&spki_der).map_err(|_| Error::Rsa)?;
         let verifying_key = VerifyingKey::<Sha256>::new(public_key);
         let signature =
             RsaSignature::try_from(defer.signature.raw_bytes()).map_err(|_| Error::Rsa)?;
