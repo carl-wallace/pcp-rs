@@ -4,7 +4,6 @@ use zerocopy::IntoBytes;
 
 use ed448_goldilocks::Ed448;
 use ml_dsa::{MlDsa44, MlDsa65, MlDsa87, VerifyingKey};
-use rsa::RsaPublicKey;
 use slh_dsa::{
     Sha2_128f, Sha2_128s, Sha2_192f, Sha2_192s, Sha2_256f, Sha2_256s, Shake128f, Shake128s,
     Shake192f, Shake192s, Shake256f, Shake256s,
@@ -55,20 +54,20 @@ pub enum PqcVerifyingKey {
     Shake192s(Box<slh_dsa::VerifyingKey<Shake192s>>),
     Shake256f(Box<slh_dsa::VerifyingKey<Shake256f>>),
     Shake256s(Box<slh_dsa::VerifyingKey<Shake256s>>),
-    Mldsa44Rsa2048PssSha256(Box<(VerifyingKey<MlDsa44>, RsaPublicKey)>),
-    Mldsa44Rsa2048Pkcs15Sha256(Box<(VerifyingKey<MlDsa44>, RsaPublicKey)>),
+    Mldsa44Rsa2048PssSha256(Box<(VerifyingKey<MlDsa44>, rsa::PublicKey)>),
+    Mldsa44Rsa2048Pkcs15Sha256(Box<(VerifyingKey<MlDsa44>, rsa::PublicKey)>),
     Mldsa44Ed25519Sha512(Box<(VerifyingKey<MlDsa44>, ed25519_dalek::VerifyingKey)>),
     Mldsa44EcdsaP256Sha256(Box<(VerifyingKey<MlDsa44>, p256::ecdsa::VerifyingKey)>),
-    Mldsa65Rsa3072PssSha512(Box<(VerifyingKey<MlDsa65>, RsaPublicKey)>),
-    Mldsa65Rsa4096PssSha512(Box<(VerifyingKey<MlDsa65>, RsaPublicKey)>),
-    Mldsa65Rsa4096Pkcs15Sha512(Box<(VerifyingKey<MlDsa65>, RsaPublicKey)>),
+    Mldsa65Rsa3072PssSha512(Box<(VerifyingKey<MlDsa65>, rsa::PublicKey)>),
+    Mldsa65Rsa4096PssSha512(Box<(VerifyingKey<MlDsa65>, rsa::PublicKey)>),
+    Mldsa65Rsa4096Pkcs15Sha512(Box<(VerifyingKey<MlDsa65>, rsa::PublicKey)>),
     Mldsa65EcdsaP256Sha512(Box<(VerifyingKey<MlDsa65>, p256::ecdsa::VerifyingKey)>),
     Mldsa65EcdsaP384Sha512(Box<(VerifyingKey<MlDsa65>, p384::ecdsa::VerifyingKey)>),
     Mldsa65Ed25519Sha512(Box<(VerifyingKey<MlDsa65>, ed25519_dalek::VerifyingKey)>),
     Mldsa87EcdsaP384Sha512(Box<(VerifyingKey<MlDsa87>, p384::ecdsa::VerifyingKey)>),
     Mldsa87Ed448Shake256(Box<(VerifyingKey<MlDsa87>, elliptic_curve::PublicKey<Ed448>)>),
-    Mldsa87Rsa3072PssSha512(Box<(VerifyingKey<MlDsa87>, RsaPublicKey)>),
-    Mldsa87Rsa4096PssSha512(Box<(VerifyingKey<MlDsa87>, RsaPublicKey)>),
+    Mldsa87Rsa3072PssSha512(Box<(VerifyingKey<MlDsa87>, rsa::PublicKey)>),
+    Mldsa87Rsa4096PssSha512(Box<(VerifyingKey<MlDsa87>, rsa::PublicKey)>),
     Mldsa87EcdsaP521Sha512(Box<(VerifyingKey<MlDsa87>, p521::ecdsa::VerifyingKey)>),
 }
 

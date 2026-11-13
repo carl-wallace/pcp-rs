@@ -5,13 +5,13 @@ use sha2::Sha256;
 
 use crate::error::Error;
 use rsa::{
-    Oaep, RsaPrivateKey, RsaPublicKey,
+    Oaep, PrivateKey, PublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey, EncodeRsaPrivateKey},
 };
 
-/// Provides an RSA KEM implementation given an [RsaPrivateKey]
+/// Provides an RSA KEM implementation given an [PrivateKey]
 pub struct RsaKem {
-    sk: RsaPrivateKey,
+    sk: PrivateKey,
 }
 
 /// Shared secret for RSA KEM
@@ -24,19 +24,19 @@ impl RsaKem {
     /// Constructs an [RsaKem] from a PKCS#1 DER-encoded private key.
     pub fn new(sk: &[u8]) -> crate::error::Result<Self> {
         Ok(Self {
-            sk: RsaPrivateKey::from_pkcs1_der(sk).map_err(|_| Error::Rsa)?,
+            sk: PrivateKey::from_pkcs1_der(sk).map_err(|_| Error::Rsa)?,
         })
     }
     /// Generates a new RSA key pair
     pub fn keygen(num_bits: usize) -> crate::error::Result<Self> {
         let mut rng = rand::rng();
         Ok(Self {
-            sk: RsaPrivateKey::new(&mut rng, num_bits)?,
+            sk: PrivateKey::new(&mut rng, num_bits)?,
         })
     }
 
-    /// Returns an [RsaPublicKey] containing the public key value
-    pub fn to_public_key(&self) -> RsaPublicKey {
+    /// Returns an [PublicKey] containing the public key value
+    pub fn to_public_key(&self) -> PublicKey {
         self.sk.to_public_key()
     }
 
@@ -53,7 +53,7 @@ impl RsaKem {
     /// RSA KEM encapsulation implementation
     pub fn encap(recip_pub_key_bytes: &[u8]) -> crate::error::Result<(SharedSecret, Ciphertext)> {
         let recip_pub_key =
-            RsaPublicKey::from_pkcs1_der(recip_pub_key_bytes).map_err(|_| Error::Rsa)?;
+            PublicKey::from_pkcs1_der(recip_pub_key_bytes).map_err(|_| Error::Rsa)?;
         let mut rng = rand::rng();
         let mut ss: SharedSecret = [0x00; 32];
         rng.fill_bytes(&mut ss);

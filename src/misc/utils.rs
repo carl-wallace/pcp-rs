@@ -396,9 +396,9 @@ pub fn generate_auth_enveloped_data(
 /// Decrypts the content-encryption key from a [KeyTransRecipientInfo] using the provided RSA private key.
 pub fn process_ktri(ktri: &KeyTransRecipientInfo, ee_sk: &[u8]) -> Result<Vec<u8>> {
     use rsa::pkcs1::DecodeRsaPrivateKey;
-    use rsa::{Pkcs1v15Encrypt, RsaPrivateKey};
+    use rsa::{Pkcs1v15Encrypt, PrivateKey};
 
-    let recipient_private_key = match RsaPrivateKey::from_pkcs1_der(ee_sk) {
+    let recipient_private_key = match PrivateKey::from_pkcs1_der(ee_sk) {
         Ok(pk) => pk,
         Err(e) => {
             return Err(Error::General(format!(
